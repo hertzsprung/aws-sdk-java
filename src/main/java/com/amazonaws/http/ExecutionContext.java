@@ -14,18 +14,19 @@
  */
 package com.amazonaws.http;
 
-import java.util.List;
-
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
 import com.amazonaws.handlers.RequestHandler;
 import com.amazonaws.internal.CustomBackoffStrategy;
+import com.amazonaws.metrics.MetricsReporter;
 import com.amazonaws.util.AWSRequestMetrics;
 
+import java.util.List;
+
 public class ExecutionContext {
-	private List<RequestHandler> requestHandlers;
+    private List<RequestHandler> requestHandlers;
 	private String contextUserAgent;
-	private AWSRequestMetrics awsRequestMetrics = new AWSRequestMetrics();
+	private AWSRequestMetrics awsRequestMetrics;
 	private CustomBackoffStrategy backoffStrategy;
 
 	/** Optional signer to enable the runtime layer to handle signing requests (and resigning on retries). */
@@ -43,11 +44,10 @@ public class ExecutionContext {
         this.contextUserAgent = contextUserAgent;
     }
 
-    public ExecutionContext() {}
-
-	public ExecutionContext(List<RequestHandler> requestHandlers) {
-		this.requestHandlers = requestHandlers;
-	}
+    public ExecutionContext(List<RequestHandler> requestHandlers, MetricsReporter metricsReporter) {
+        this.requestHandlers = requestHandlers;
+        this.awsRequestMetrics = new AWSRequestMetrics(metricsReporter);
+    }
 
 	/**
 	 * Returns a list of request handlers that should be run for a given

@@ -14,21 +14,21 @@
  */
 package com.amazonaws;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import com.amazonaws.handlers.RequestHandler;
 import com.amazonaws.http.AmazonHttpClient;
 import com.amazonaws.http.ExecutionContext;
 import com.amazonaws.http.HttpMethodName;
 import com.amazonaws.http.HttpRequest;
+import com.amazonaws.metrics.LoggingMetricsReporter;
+import com.amazonaws.metrics.MetricsReporter;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.ServiceAbbreviations;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Abstract base class for Amazon Web Service Java clients.
@@ -49,6 +49,8 @@ public abstract class AmazonWebServiceClient {
 
     /** Optional request handlers for additional request processing. */
     protected final List<RequestHandler> requestHandlers;
+
+    private MetricsReporter metricsReporter = new LoggingMetricsReporter();
     
     /** Optional offset (in seconds) to use when signing requests */
     protected int timeOffset;
@@ -221,6 +223,10 @@ public abstract class AmazonWebServiceClient {
     	requestHandlers.add(requestHandler);
     }
 
+    public void setMetricsReporter(MetricsReporter metricsReporter) {
+        this.metricsReporter = metricsReporter;
+    }
+
     /**
      * Removes a request handler from the list of registered handlers that are run
      * as part of a request's lifecycle.
@@ -234,10 +240,10 @@ public abstract class AmazonWebServiceClient {
     }
 
     protected ExecutionContext createExecutionContext() {
-        ExecutionContext executionContext = new ExecutionContext(requestHandlers);
+        ExecutionContext executionContext = new ExecutionContext(requestHandlers, metricsReporter);
         return executionContext;
     }
-    
+
     /**
      * Sets the optional value for time offset for this client.  This
      * value will be applied to all requests processed through this client.

@@ -15,16 +15,14 @@
 
 package com.amazonaws.util;
 
+import com.amazonaws.http.AmazonHttpClient;
+import com.amazonaws.metrics.MetricsReporter;
+import com.amazonaws.metrics.NullMetricsReporter;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import com.amazonaws.http.AmazonHttpClient;
 
 public class AWSRequestMetrics {
 
@@ -60,14 +58,12 @@ public class AWSRequestMetrics {
     /* A map to store events that are being profiled. */
     private final Map<String, Long> eventsBeingProfiled = new HashMap<String, Long>();
     /* Latency Logger */
-    private static final Log latencyLogger = LogFactory.getLog("com.amazonaws.latency");
-    private static final Object KEY_VALUE_SEPARATOR = "=";
-    private static final Object COMMA_SEPARATOR = ", ";
-    
-    
-    public AWSRequestMetrics() {
+    private final MetricsReporter metricsReporter;
+
+    public AWSRequestMetrics(MetricsReporter metricsReporter) {
         this.timingInfo = new TimingInfo();
         this.profilingSystemPropertyEnabled = isProfilingEnabled();
+        this.metricsReporter = profilingSystemPropertyEnabled ? metricsReporter : new NullMetricsReporter();
     }
 
     /* Check the profiling system property and return true if set */
@@ -150,32 +146,14 @@ public class AWSRequestMetrics {
     }
     
     public void log() {
-        if (!profilingSystemPropertyEnabled) {
-            return;
-        }
-        
-        StringBuilder builder = new StringBuilder();
-        
-        for (Entry<String, List<Object>> entry : properties.entrySet()) {
-            keyValueFormat(entry.getKey(), entry.getValue(), builder);
-        }
-        
-        for (Entry<String, Number> entry : timingInfo.getAllCounters().entrySet()) {
-            keyValueFormat(entry.getKey(), entry.getValue(), builder);
-        }
-
-        for (Entry<String, List<TimingInfo>> entry : timingInfo.getSubMeasurementsByName().entrySet()) {
-            keyValueFormat(entry.getKey(), entry.getValue(), builder);
-        }
-
-        latencyLogger.info(builder.toString());
-    }
-
-    private void keyValueFormat(Object key, Object value, StringBuilder builder) {
-        builder.append(key).append(KEY_VALUE_SEPARATOR).append(value).append(COMMA_SEPARATOR);
+        metricsReporter.report(this);
     }
     
     public TimingInfo getTimingInfo() {
         return timingInfo;
+    }
+
+    public Map<String, List<Object>> getProperties() {
+        return properties;
     }
 }
